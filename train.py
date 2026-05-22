@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import json
+import gc 
 
 from model import AcousticPhoneticLinguistic
 from dataset import APLSupervisedDataset, make_apl_collate_fn
@@ -84,6 +85,10 @@ def main(args):
             running_loss += loss.item()
             progress_bar.set_postfix({"loss": f"{loss.item():.4f}"})
             
+            del waveforms, linguistics, transcripts, logits, log_probs, loss
+            gc.collect()
+            torch.cuda.empty_cache()
+            
         print(f"Epoch {epoch+1} Complete. Avg Loss: {running_loss / len(train_loader):.4f}")
         
         # Evaluation on Dev Set
@@ -116,7 +121,7 @@ def main(args):
             metrics = calculate_all_metrics(all_hyps, all_trans, all_canons)
             print(f"\n--- Validation Report (Epoch {epoch+1}) ---")
             print(f"PR Correctness: {metrics['PR_Correctness']:.4f} | Accuracy: {metrics['PR_Accuracy']:.4f}")
-            print(f"MDD F-measure: {metrics['MDD_F_measure']:.4f} | Precision: {metrics['MDD_Precision']:.4f} | Recall/DR: {metrics['MDD_DR']:.4f}")
+            print(f"MDD F-measure: {metrics['MDD_F_measure']:.4f} | Precision: {metrics['MDD_Precision']:.4f} | Recall/DR: {metrics['MDD_Recall']:.4f}")
             print(f"MDD FAR: {metrics['MDD_FAR']:.4f} | FRR: {metrics['MDD_FRR']:.4f} | DER: {metrics['MDD_DER']:.4f}")
             
             if metrics['MDD_F_measure'] > best_f1:

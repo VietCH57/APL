@@ -61,7 +61,7 @@ def main(args):
     print(f"   - Accuracy:              {metrics['PR_Accuracy']*100:.2f}%")
     print(f"\n2. Mispronunciation Detection & Diagnosis (MDD) Metrics:")
     print(f"   - Precision:             {metrics['MDD_Precision']*100:.2f}%")
-    print(f"   - Recall (Detection Rate):{metrics['MDD_DR']*100:.2f}%")
+    print(f"   - Recall (Detection Rate):{metrics['MDD_Recall']*100:.2f}%")
     print(f"   - F-measure:             {metrics['MDD_F_measure']*100:.2f}%")
     print(f"   - False Alarm Rate (FAR): {metrics['MDD_FAR']*100:.2f}%")
     print(f"   - False Reject Rate (FRR):{metrics['MDD_FRR']*100:.2f}%")

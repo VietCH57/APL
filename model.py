@@ -111,26 +111,26 @@ class AcousticPhoneticLinguistic(nn.Module):
         self.attn = nn.MultiheadAttention(embed_dim=proj_dim, num_heads=8, batch_first=True)
         self.decoder = nn.Linear(proj_dim + self.hq_dim, num_classes)
 
-    def forward(self, wav_padded, linguistic_tokens):
+def forward(self, wav_padded, linguistic_tokens):
         self.wav2vec2.eval() 
         with torch.no_grad():
-            mels = self.cal_mel(wav_padded).permute(0, 2, 1) # (Batch, Time, 80)
+            mels = self.cal_mel(wav_padded).permute(0, 2, 1) 
             energies = mels.sum(dim=-1, keepdim=True)
-            fbanks = torch.cat([mels, energies], dim=-1)     # (Batch, Time, 81)
+            fbanks = torch.cat([mels, energies], dim=-1)     
             
             mean = wav_padded.mean(dim=-1, keepdim=True)
             var = wav_padded.var(dim=-1, keepdim=True, unbiased=False)
             wav_norm = (wav_padded - mean) / torch.sqrt(var + 1e-7)
             
             w2v_outputs = self.wav2vec2(wav_norm)
-            w2v_embs = w2v_outputs.last_hidden_state         # (Batch, Time_w2v, 768)
+            w2v_embs = w2v_outputs.last_hidden_state         
             
             min_time = min(fbanks.size(1), w2v_embs.size(1))
             fbanks = fbanks[:, :min_time, :]
             w2v_embs = w2v_embs[:, :min_time, :]
             
         Ha = self.acoustic(fbanks)
-        Hp = self.phonetic(w2v_embs)
+        Hp = self.phonetic(w2v_embs.detach()) 
         
         Hq = torch.cat((Ha, Hp), dim=-1)
         Hq_proj = self.project_hq(Hq)
