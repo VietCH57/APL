@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-# ĐẢM BẢO CÓ HAI DÒNG IMPORT NÀY Ở ĐẦU FILE MODEL.PY
 from transformers import Wav2Vec2Model
 from torchaudio.transforms import MelSpectrogram
 
