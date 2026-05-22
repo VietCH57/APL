@@ -13,33 +13,24 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Running Inference on device: {device}")
     
-    # Load Vocabulary
     with open(args.vocab_path, 'r', encoding='utf-8') as f:
         vocab = json.load(f)
     id_to_vocab = {v: k for k, v in vocab.items()}
     
-    # Dataset
-    test_dataset = APLSupervisedDataset(args.test_csv, args.vocab_path)
+    test_dataset = APLSupervisedDataset(args.test_csv, args.wav_dir, args.vocab_path)
     collate_fn = make_apl_collate_fn(pad_idx=69, error_pad_idx=2)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2)
     
-    # APL Model Initialization
     model = AcousticPhoneticLinguistic(
-        num_classes=len(vocab),
-        freq_bins=81,
-        phon_feat_bins=768,
-        lstm_hidden=256,
-        proj_dim=1024
+        num_classes=len(vocab), freq_bins=81, phon_feat_bins=768, lstm_hidden=256, proj_dim=1024
     ).to(device)
     
-    # Load weights from checkpoint
-    print(f"Loading weights from checkpoint: {args.checkpoint}")
+    print(f"Loading weights from: {args.checkpoint}")
     model.load_state_dict(torch.load(args.checkpoint, map_location=device))
     model.eval()
     
     all_hyps, all_trans, all_canons = [], [], []
     
-    # Inference on Test Set
     with torch.no_grad():
         for batch in tqdm(test_loader, desc="Testing"):
             waveforms = batch['waveforms'].to(device)
@@ -47,7 +38,7 @@ def main(args):
             transcripts = batch['transcripts'].to(device)
             target_lengths = batch['target_lengths']
             
-            logits, log_probs, min_time = model(waveforms, linguistics)
+            _, log_probs, min_time = model(waveforms, linguistics)
             input_lengths = torch.full((waveforms.size(0),), fill_value=min_time, dtype=torch.long)
             
             hyps = greedy_decode(log_probs, input_lengths, id_to_vocab)
@@ -62,7 +53,6 @@ def main(args):
                 l_seq = batch['linguistics'][i][:l_len].tolist()
                 all_canons.append([id_to_vocab[idx] for idx in l_seq if idx != 69])
                 
-    # Metrics Calculation
     metrics = calculate_all_metrics(all_hyps, all_trans, all_canons)
     
     print("\n================ FINAL TEST EVALUATION REPORT ================")
@@ -81,6 +71,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--test_csv", type=str, default="/kaggle/input/en-mdd/test.csv")
+    parser.add_argument("--wav_dir", type=str, default="/kaggle/input/en-mdd/EN_MDD/WAV/")
     parser.add_argument("--vocab_path", type=str, default="./vocab.json")
     parser.add_argument("--checkpoint", type=str, default="./checkpoint/best_model.pth")
     parser.add_argument("--batch_size", type=int, default=16)

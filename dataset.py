@@ -6,11 +6,13 @@ import torch
 from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
 
+SAMPLING_RATE = 16000
+
 class APLSupervisedDataset(Dataset):
-    def __init__(self, csv_path, extracted_dir, vocab_json_path, pad_token="[PAD]"):
+    def __init__(self, csv_path, wav_dir, vocab_json_path, pad_token="[PAD]"):
         super().__init__()
         self.df = pd.read_csv(csv_path)
-        self.extracted_dir = extracted_dir
+        self.wav_dir = wav_dir
         
         with open(vocab_json_path, 'r', encoding='utf-8') as f:
             self.vocab = json.load(f)
@@ -27,33 +29,26 @@ class APLSupervisedDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
+        wav_path = os.path.join(self.wav_dir, f"{row['Path']}.wav")
         
-        safe_filename = str(row['Path']).replace("/", "_")
-        
-        fbank_path = os.path.join(self.extracted_dir, f"{safe_filename}_fbank.pt")
-        w2v_path = os.path.join(self.extracted_dir, f"{safe_filename}_w2v.pt")
-        
-        fbank = torch.load(fbank_path)  # (Time, 81)
-        w2v_emb = torch.load(w2v_path)  # (Time, Feature_Dim)
-        
+        waveform, sr = torchaudio.load(wav_path)
+        if sr != SAMPLING_RATE:
+            waveform = torchaudio.functional.resample(waveform, sr, SAMPLING_RATE)
+        waveform = waveform.squeeze(0)  
+
         linguistic_ids = self._text_to_ids(row['Canonical'])
-        linguistic_tensor = torch.tensor(linguistic_ids, dtype=torch.long)
-        
-        transcript_ids = self._text_to_ids(row['Transcript'])
-        transcript_tensor = torch.tensor(transcript_ids, dtype=torch.long)
-        
+        transcript_ids = self._text_to_ids(row['Transcript'])  
+
         try:
             error_list = ast.literal_eval(row['Error'])
         except:
             error_list = []
-        error_tensor = torch.tensor(error_list, dtype=torch.long)
-
+        
         return (
-            fbank, 
-            w2v_emb, 
-            linguistic_tensor, 
-            transcript_tensor, 
-            error_tensor
+            waveform,
+            torch.tensor(linguistic_ids, dtype=torch.long),
+            torch.tensor(transcript_ids, dtype=torch.long),
+            torch.tensor(error_list, dtype=torch.long)
         )
 
 
