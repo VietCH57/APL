@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from transformers import Wav2Vec2Model
+from torchaudio.transforms import MelSpectrogram
 
 class CNNBlock(nn.Module): 
     def __init__(self, in_ch, out_ch, kernel=3, padding=1, dropout=0.2):
