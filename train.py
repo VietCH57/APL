@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import json
-import gc 
 
 from model import AcousticPhoneticLinguistic
 from dataset import APLSupervisedDataset, make_apl_collate_fn
@@ -84,10 +83,6 @@ def main(args):
             
             running_loss += loss.item()
             progress_bar.set_postfix({"loss": f"{loss.item():.4f}"})
-            
-            del waveforms, linguistics, transcripts, logits, log_probs, loss
-            gc.collect()
-            torch.cuda.empty_cache()
             
         print(f"Epoch {epoch+1} Complete. Avg Loss: {running_loss / len(train_loader):.4f}")
         
