@@ -95,7 +95,7 @@ class AcousticPhoneticLinguistic(nn.Module):
         super().__init__()
         self.cal_mel = MelSpectrogram(sample_rate=16000, n_fft=400, hop_length=160, n_mels=80)
         
-        self.wav2vec2 = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
+        self.wav2vec2 = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-100h")
         for param in self.wav2vec2.parameters():
             param.requires_grad = False
             
